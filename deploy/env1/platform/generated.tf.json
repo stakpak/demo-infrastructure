@@ -1,0 +1,107 @@
+{
+  "data": {
+    "aws_eks_cluster": {
+      "env1": {
+        "name": "env1"
+      }
+    },
+    "aws_eks_cluster_auth": {
+      "env1": {
+        "name": "env1"
+      }
+    }
+  },
+  "provider": {
+    "aws": {
+      "region": "eu-north-1"
+    },
+    "helm": {
+      "kubernetes": {
+        "host": "${data.aws_eks_cluster.env1.endpoint}",
+        "token": "${data.aws_eks_cluster_auth.env1.token}",
+        "cluster_ca_certificate": "${base64decode(data.aws_eks_cluster.env1.certificate_authority.0.data)}"
+      }
+    }
+  },
+  "terraform": {
+    "backend": {
+      "s3": {
+        "bucket": "stakpak-demo-terraform-state",
+        "key": "paymob/env1/infrastructure/platform",
+        "region": "eu-north-1"
+      }
+    },
+    "required_providers": {
+      "aws": {
+        "source": "hashicorp/aws",
+        "version": "5.32.1"
+      },
+      "helm": {
+        "source": "hashicorp/helm",
+        "version": "2.12.1"
+      }
+    }
+  },
+  "resource": {
+    "helm_release": {
+      "external-secrets": {
+        "name": "external-secrets",
+        "namespace": "external-secrets",
+        "repository": "https://external-secrets.io",
+        "chart": "external-secrets",
+        "version": "0.6.1",
+        "timeout": 600,
+        "atomic": true,
+        "create_namespace": true,
+        "values": [
+          "replicaCount: 1\nimage:\n  repository: ghcr.io/external-secrets/external-secrets\n  pullPolicy: IfNotPresent\n  tag: \"\"\ninstallCRDs: true\ncrds:\n  createClusterExternalSecret: true\n  createClusterSecretStore: true\nimagePullSecrets: []\nnameOverride: \"\"\nfullnameOverride: \"\"\nleaderElect: false\ncontrollerClass: \"\"\nscopedNamespace: \"\"\nscopedRBAC: false\nprocessClusterExternalSecret: true\nprocessClusterStore: true\ncreateOperator: true\nconcurrent: 1\nserviceAccount:\n  create: true\n  annotations: {}\n  extraLabels: {}\n  name: \"\"\nrbac:\n  create: true\nextraEnv: []\nextraArgs: {}\nextraVolumes: []\nextraVolumeMounts: []\ndeploymentAnnotations: {}\npodAnnotations: {}\npodLabels: {}\npodSecurityContext: {}\nsecurityContext: {}\nresources: {}\nprometheus:\n  enabled: false\n  service:\n    port: 8080\nserviceMonitor:\n  enabled: false\n  additionalLabels: {}\n  interval: 30s\n  scrapeTimeout: 25s\nmetrics:\n  service:\n    enabled: false\n    port: 8080\n    annotations: {}\nnodeSelector: {}\ntolerations: []\naffinity: {}\npriorityClassName: \"\"\npodDisruptionBudget:\n  enabled: false\n  minAvailable: 1\n  maxUnavailable: null\nwebhook:\n  create: true\n  certCheckInterval: 5m\n  lookaheadInterval: \"\"\n  replicaCount: 1\n  certDir: /tmp/certs\n  failurePolicy: Fail\n  hostNetwork: false\n  image:\n    repository: ghcr.io/external-secrets/external-secrets\n    pullPolicy: IfNotPresent\n    tag: \"\"\n  imagePullSecrets: []\n  nameOverride: \"\"\n  fullnameOverride: \"\"\n  port: 10250\n  rbac:\n    create: true\n  serviceAccount:\n    create: true\n    annotations: {}\n    extraLabels: {}\n    name: \"\"\n  nodeSelector: {}\n  tolerations: []\n  affinity: {}\n  priorityClassName: \"\"\n  podDisruptionBudget:\n    enabled: false\n    minAvailable: 1\n    maxUnavailable: null\n  prometheus:\n    enabled: false\n    service:\n      port: 8080\n  serviceMonitor:\n    enabled: false\n    additionalLabels: {}\n    interval: 30s\n    scrapeTimeout: 25s\n  metrics:\n    service:\n      enabled: false\n      port: 8080\n      annotations: {}\n  readinessProbe:\n    address: \"\"\n    port: 8081\n  extraEnv: []\n  extraArgs: {}\n  extraVolumes: []\n  extraVolumeMounts: []\n  secretAnnotations: {}\n  deploymentAnnotations: {}\n  podAnnotations: {}\n  podLabels: {}\n  podSecurityContext: {}\n  securityContext: {}\n  resources: {}\ncertController:\n  create: true\n  requeueInterval: 5m\n  replicaCount: 1\n  image:\n    repository: ghcr.io/external-secrets/external-secrets\n    pullPolicy: IfNotPresent\n    tag: \"\"\n  imagePullSecrets: []\n  nameOverride: \"\"\n  fullnameOverride: \"\"\n  rbac:\n    create: true\n  serviceAccount:\n    create: true\n    annotations: {}\n    extraLabels: {}\n    name: \"\"\n  nodeSelector: {}\n  tolerations: []\n  affinity: {}\n  priorityClassName: \"\"\n  podDisruptionBudget:\n    enabled: false\n    minAvailable: 1\n    maxUnavailable: null\n  prometheus:\n    enabled: false\n    service:\n      port: 8080\n  serviceMonitor:\n    enabled: false\n    additionalLabels: {}\n    interval: 30s\n    scrapeTimeout: 25s\n  metrics:\n    service:\n      enabled: false\n      port: 8080\n      annotations: {}\n  extraEnv: []\n  extraArgs: {}\n  extraVolumes: []\n  extraVolumeMounts: []\n  deploymentAnnotations: {}\n  podAnnotations: {}\n  podLabels: {}\n  podSecurityContext: {}\n  securityContext: {}\n  resources: {}\ndnsConfig: {}\n"
+        ],
+        "depends_on": []
+      },
+      "cert-manager": {
+        "name": "cert-manager",
+        "namespace": "cert-manager",
+        "repository": "https://charts.jetstack.io",
+        "chart": "cert-manager",
+        "version": "1.12.0",
+        "timeout": 600,
+        "atomic": true,
+        "create_namespace": true,
+        "values": [
+          "installCRDs: true\n"
+        ],
+        "depends_on": []
+      },
+      "ingress-nginx": {
+        "name": "ingress-nginx",
+        "namespace": "ingress-nginx",
+        "repository": "https://kubernetes.github.io/ingress-nginx",
+        "chart": "ingress-nginx",
+        "version": "4.0.5",
+        "timeout": 600,
+        "atomic": true,
+        "create_namespace": true,
+        "values": [
+          "controller:\n  podSecurityContext:\n    runAsNonRoot: true\n  service:\n    enableHttp: true\n    enableHttps: true\n    annotations:\n      service.beta.kubernetes.io/aws-load-balancer-type: nlb\n"
+        ],
+        "depends_on": [
+          "helm_release.cert-manager"
+        ]
+      },
+      "argo-cd": {
+        "name": "argo-cd",
+        "namespace": "argo-cd",
+        "repository": "https://argoproj.github.io/argo-helm",
+        "chart": "argo-cd",
+        "version": "4.5.11",
+        "timeout": 600,
+        "atomic": true,
+        "create_namespace": true,
+        "values": [
+          "nameOverride: argo-cd\nredis-ha:\n  enabled: false\ncontroller:\n  replicas: 1\nserver:\n  replicas: 1\nrepoServer:\n  replicas: 1\napplicationSet:\n  replicaCount: 1\n"
+        ],
+        "depends_on": []
+      }
+    }
+  }
+}

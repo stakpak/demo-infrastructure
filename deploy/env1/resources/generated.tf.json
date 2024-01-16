@@ -1,0 +1,245 @@
+{
+  "data": {
+    "aws_eks_cluster": {
+      "env1": {
+        "name": "env1"
+      }
+    },
+    "aws_eks_cluster_auth": {
+      "env1": {
+        "name": "env1"
+      }
+    }
+  },
+  "provider": {
+    "aws": {
+      "region": "eu-north-1"
+    },
+    "kubernetes": {
+      "host": "${data.aws_eks_cluster.env1.endpoint}",
+      "token": "${data.aws_eks_cluster_auth.env1.token}",
+      "cluster_ca_certificate": "${base64decode(data.aws_eks_cluster.env1.certificate_authority.0.data)}"
+    }
+  },
+  "terraform": {
+    "backend": {
+      "s3": {
+        "bucket": "stakpak-demo-terraform-state",
+        "key": "paymob/env1/infrastructure/resources",
+        "region": "eu-north-1"
+      }
+    },
+    "required_providers": {
+      "aws": {
+        "source": "hashicorp/aws",
+        "version": "5.32.1"
+      },
+      "kubernetes": {
+        "source": "hashicorp/kubernetes",
+        "version": "2.24.0"
+      }
+    }
+  },
+  "resource": {
+    "kubernetes_manifest": {
+      "mainStore_secret-store-main": {
+        "manifest": {
+          "metadata": {
+            "name": "main",
+            "labels": {},
+            "annotations": {}
+          },
+          "spec": {
+            "controller": "",
+            "provider": {
+              "aws": {
+                "service": "ParameterStore",
+                "auth": {
+                  "secretRef": {
+                    "accessKeyIDSecretRef": {
+                      "namespace": "external-secrets",
+                      "name": "env1-secrets-user",
+                      "key": "access-key"
+                    },
+                    "secretAccessKeySecretRef": {
+                      "namespace": "external-secrets",
+                      "name": "env1-secrets-user",
+                      "key": "secret-access-key"
+                    }
+                  }
+                },
+                "region": "eu-north-1"
+              }
+            },
+            "refreshInterval": 0
+          },
+          "apiVersion": "external-secrets.io/v1beta1",
+          "kind": "ClusterSecretStore"
+        }
+      },
+      "certIssuer_cert-issuer-letsencrypt": {
+        "manifest": {
+          "apiVersion": "cert-manager.io/v1",
+          "kind": "ClusterIssuer",
+          "spec": {
+            "acme": {
+              "email": "george@stakpak.dev",
+              "server": "https://acme-v02.api.letsencrypt.org/directory",
+              "preferredChain": "ISRG Root X1",
+              "privateKeySecretRef": {
+                "name": "letsencrypt-secret"
+              },
+              "solvers": [
+                {
+                  "http01": {
+                    "ingress": {
+                      "class": "nginx"
+                    }
+                  }
+                },
+                {
+                  "selector": {
+                    "dnsZones": [
+                      "*.guku.io"
+                    ]
+                  },
+                  "dns01": {
+                    "route53": {
+                      "region": "eu-north-1",
+                      "accessKeyIDSecretRef": {
+                        "name": "env1-route53-user",
+                        "key": "access-key"
+                      },
+                      "secretAccessKeySecretRef": {
+                        "name": "env1-route53-user",
+                        "key": "secret-access-key"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "metadata": {
+            "name": "letsencrypt",
+            "labels": {},
+            "annotations": {}
+          }
+        }
+      },
+      "apps_argocd-onlineboutique": {
+        "manifest": {
+          "apiVersion": "argoproj.io/v1alpha1",
+          "kind": "Application",
+          "metadata": {
+            "namespace": "argo-cd",
+            "name": "onlineboutique",
+            "labels": {},
+            "annotations": {
+              "argocd.argoproj.io/sync-wave": "0"
+            }
+          },
+          "spec": {
+            "source": {
+              "repoURL": "us-docker.pkg.dev/online-boutique-ci/charts",
+              "targetRevision": "0.8.1",
+              "helm": {
+                "releaseName": "onlineboutique",
+                "values": "frontend:\n  externalService: false\n"
+              },
+              "chart": "onlineboutique"
+            },
+            "destination": {
+              "namespace": "default",
+              "server": "https://kubernetes.default.svc"
+            },
+            "project": "default",
+            "syncPolicy": {
+              "automated": {
+                "prune": true,
+                "selfHeal": true
+              },
+              "syncOptions": [
+                "CreateNamespace=true"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "kubernetes_secret_v1": {
+      "mainStore_env1-secrets-user": {
+        "metadata": {
+          "namespace": "external-secrets",
+          "name": "env1-secrets-user"
+        },
+        "data": {
+          "access-key": "${aws_iam_access_key.env1-secrets-user.id}",
+          "secret-access-key": "${aws_iam_access_key.env1-secrets-user.secret}"
+        }
+      },
+      "certIssuer_env1-route53-user": {
+        "metadata": {
+          "namespace": "cert-manager",
+          "name": "env1-route53-user"
+        },
+        "data": {
+          "access-key": "${aws_iam_access_key.env1-route53-user.id}",
+          "secret-access-key": "${aws_iam_access_key.env1-route53-user.secret}"
+        }
+      }
+    },
+    "aws_iam_user": {
+      "env1-secrets-user": {
+        "name": "env1-secrets-user"
+      },
+      "env1-route53-user": {
+        "name": "env1-route53-user"
+      }
+    },
+    "aws_iam_policy": {
+      "env1-secrets-user_secret-access": {
+        "name": "env1-secrets-user-secret-access",
+        "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"IAMUserPolicy\",\"Effect\":\"Allow\",\"Action\":[\"ssm:GetParameter\",\"ssm:ListTagsForResource\",\"ssm:DescribeParameters\"],\"Resource\":[\"arn:aws:ssm:eu-north-1:540379201213:parameter/env1*\"],\"Condition\":{}}]}"
+      },
+      "env1-route53-user_get-route53-change": {
+        "name": "env1-route53-user-get-route53-change",
+        "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"IAMUserPolicy\",\"Effect\":\"Allow\",\"Action\":[\"route53:GetChange\"],\"Resource\":[\"arn:aws:route53:::change/*\"],\"Condition\":{}}]}"
+      },
+      "env1-route53-user_update-route53-records": {
+        "name": "env1-route53-user-update-route53-records",
+        "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"IAMUserPolicy\",\"Effect\":\"Allow\",\"Action\":[\"route53:ChangeResourceRecordSets\",\"route53:ListResourceRecordSets\"],\"Resource\":[\"arn:aws:route53:::hostedzone/*\"],\"Condition\":{}}]}"
+      },
+      "env1-route53-user_list-route53-zones": {
+        "name": "env1-route53-user-list-route53-zones",
+        "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"IAMUserPolicy\",\"Effect\":\"Allow\",\"Action\":[\"route53:ListHostedZonesByName\"],\"Resource\":[\"*\"],\"Condition\":{}}]}"
+      }
+    },
+    "aws_iam_access_key": {
+      "env1-secrets-user": {
+        "user": "${aws_iam_user.env1-secrets-user.name}"
+      },
+      "env1-route53-user": {
+        "user": "${aws_iam_user.env1-route53-user.name}"
+      }
+    },
+    "aws_iam_user_policy_attachment": {
+      "env1-secrets-user_secret-access": {
+        "user": "${aws_iam_user.env1-secrets-user.name}",
+        "policy_arn": "${aws_iam_policy.env1-secrets-user_secret-access.arn}"
+      },
+      "env1-route53-user_get-route53-change": {
+        "user": "${aws_iam_user.env1-route53-user.name}",
+        "policy_arn": "${aws_iam_policy.env1-route53-user_get-route53-change.arn}"
+      },
+      "env1-route53-user_update-route53-records": {
+        "user": "${aws_iam_user.env1-route53-user.name}",
+        "policy_arn": "${aws_iam_policy.env1-route53-user_update-route53-records.arn}"
+      },
+      "env1-route53-user_list-route53-zones": {
+        "user": "${aws_iam_user.env1-route53-user.name}",
+        "policy_arn": "${aws_iam_policy.env1-route53-user_list-route53-zones.arn}"
+      }
+    }
+  }
+}

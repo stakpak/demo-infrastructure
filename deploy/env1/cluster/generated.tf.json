@@ -1,0 +1,120 @@
+{
+  "data": {
+    "aws_vpc": {
+      "env1": {
+        "tags": {
+          "Name": "env1"
+        }
+      }
+    },
+    "aws_subnets": {
+      "env1_private": {
+        "filter": [
+          {
+            "name": "vpc-id",
+            "values": [
+              "${data.aws_vpc.env1.id}"
+            ]
+          },
+          {
+            "name": "mapPublicIpOnLaunch",
+            "values": [
+              "false"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "provider": {
+    "aws": {
+      "region": "eu-north-1"
+    }
+  },
+  "terraform": {
+    "backend": {
+      "s3": {
+        "bucket": "stakpak-demo-terraform-state",
+        "key": "paymob/env1/infrastructure/cluster",
+        "region": "eu-north-1"
+      }
+    },
+    "required_providers": {
+      "aws": {
+        "source": "hashicorp/aws",
+        "version": "5.32.1"
+      }
+    }
+  },
+  "module": {
+    "cert_manager_irsa_role": {
+      "source": "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks",
+      "version": "5.32.0",
+      "role_name": "cert-manager",
+      "attach_cert_manager_policy": true,
+      "cert_manager_hosted_zone_arns": [
+        "arn:aws:route53:::hostedzone/Z02801112OAJQ6IQWS1U5"
+      ],
+      "oidc_providers": {
+        "ex": {
+          "provider_arn": "${module.env1.oidc_provider_arn}",
+          "namespace_service_accounts": [
+            "kube-system:cert-manager"
+          ]
+        }
+      },
+      "tags": {
+        "karpenter.sh/discovery": "env1"
+      }
+    },
+    "env1": {
+      "source": "terraform-aws-modules/eks/aws",
+      "version": "19.21.0",
+      "cluster_name": "env1",
+      "cluster_version": "1.28",
+      "cluster_endpoint_public_access": true,
+      "vpc_id": "${data.aws_vpc.env1.id}",
+      "subnet_ids": "${data.aws_subnets.env1_private.ids}",
+      "eks_managed_node_groups": {
+        "default": {
+          "iam_role_name": "node-env1",
+          "iam_role_use_name_prefix": false,
+          "iam_role_additional_policies": {
+            "AmazonSSMManagedInstanceCore": "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          },
+          "ami_type": "BOTTLEROCKET_x86_64",
+          "platform": "bottlerocket",
+          "min_size": 2,
+          "max_size": 5,
+          "desired_size": 2,
+          "instance_types": [
+            "t3.xlarge"
+          ]
+        }
+      },
+      "tags": {
+        "karpenter.sh/discovery": "env1"
+      }
+    },
+    "external_secrets_irsa_role": {
+      "source": "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks",
+      "version": "5.32.0",
+      "role_name": "secret-store",
+      "attach_external_secrets_policy": true,
+      "external_secrets_ssm_parameter_arns": [
+        "arn:aws:ssm:*:*:parameter/env1-*"
+      ],
+      "oidc_providers": {
+        "ex": {
+          "provider_arn": "${module.env1.oidc_provider_arn}",
+          "namespace_service_accounts": [
+            "external-secrets:secret-store"
+          ]
+        }
+      },
+      "tags": {
+        "karpenter.sh/discovery": "env1"
+      }
+    }
+  }
+}
