@@ -215,10 +215,10 @@
       "default_0": {
         "zone_id": "${data.aws_route53_zone.guku_io.zone_id}",
         "name": "demo.guku.io",
-        "type": "A",
+        "type": "CNAME",
         "ttl": 300,
         "records": [
-          "${data.kubernetes_service_v1.gatway_default.status.0.load_balancer.0.ingress.0.ip}"
+          "${data.kubernetes_service_v1.gatway_default.status.0.load_balancer.0.ingress.0.hostname}"
         ]
       }
     },

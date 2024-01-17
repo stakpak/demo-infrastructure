@@ -171,7 +171,7 @@ StandardEnvironmentBuilder: {
 				desc: "Apply \(config.name) layer"
 				deps: ["init-\(layer)"]
 				dir: "deploy/\(config.name)/\(layer)"
-				cmds: ["terraform apply"]
+				cmds: ["terraform apply -auto-approve"]
 			}
 			"plan-\(layer)": {
 				desc: "Plan \(config.name) layer"
