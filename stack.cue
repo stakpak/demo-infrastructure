@@ -369,7 +369,7 @@ StandardEnvironmentBuilder: {
 			]
 		}
 
-		let reverseLayers = ["resources", "platform", "cluster"]
+		let reverseLayers = ["resources", "platform", "cluster", "network"]
 		"destroy-all": {
 			cmds: [
 				for layer in reverseLayers {
