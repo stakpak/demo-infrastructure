@@ -5,6 +5,20 @@
         "name": "env1"
       }
     },
+    "kubernetes_service_v1": {
+      "gatway_default": {
+        "metadata": {
+          "name": "ingress-nginx-controller",
+          "namespace": "ingress-nginx"
+        }
+      }
+    },
+    "aws_route53_zone": {
+      "guku_io": {
+        "name": "guku.io",
+        "private_zone": false
+      }
+    },
     "aws_eks_cluster_auth": {
       "env1": {
         "name": "env1"
@@ -195,6 +209,17 @@
       },
       "env1-route53-user": {
         "name": "env1-route53-user"
+      }
+    },
+    "aws_route53_record": {
+      "default_0": {
+        "zone_id": "${data.aws_route53_zone.guku_io.zone_id}",
+        "name": "demo.guku.io",
+        "type": "A",
+        "ttl": 300,
+        "records": [
+          "${data.kubernetes_service_v1.gatway_default.status.0.load_balancer.0.ingress.0.ip}"
+        ]
       }
     },
     "aws_iam_policy": {
